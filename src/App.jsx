@@ -13,6 +13,9 @@ const navigation = [
   ['log', 'Data Log', 'cloud'],
 ];
 const periods = ['Daily', 'Weekly', 'Monthly', 'Yearly'];
+// Dashboard flow-to-pressure calibration: 0.010 L/s corresponds to 1 bar.
+// Replace this constant with the pipe/pump calibration when available.
+const PRESSURE_PER_LPS = 100;
 
 function Status({ label, active = true }) {
   return <span className={`status-chip ${active ? 'online' : 'offline'}`}><i/>{label}</span>;
@@ -45,11 +48,13 @@ function Metric({ title, value, unit, icon, color = 'blue', subtitle }) {
   return <div className={`metric-card ${color}`}><div className="metric-icon"><Icon name={icon} size={29}/></div><div><h2>{title}</h2><div className="metric-value">{value}{unit && <span> {unit}</span>}</div>{subtitle && <p>{subtitle}</p>}</div></div>;
 }
 function SensorCards({ current }) {
+  const flowBasedPressure = current.flowPerSecond * PRESSURE_PER_LPS;
   return <div className="sensor-grid">
     <Metric title="Inlet Flow" value={number(current.flow, 1)} unit="L/min" icon="drop" subtitle={`Variation ${number(current.flowVariation, 1)} L/min`}/>
     <Metric title="Water Flow per Second" value={number(current.flowPerSecond, 3)} unit="L/s" icon="gauge" color="teal" subtitle={`From inlet flow ${number(current.flow, 1)} L/min`}/>
     <Metric title="Outlet Flow" value={current.outletAvailable ? number(current.outletFlow, 5) : '—'} unit={current.outletAvailable ? 'L/min' : ''} icon="drop" color="teal" subtitle={current.outletAvailable ? 'Leak alert when below inlet flow' : 'Waiting for outlet reading'}/>
-    <Metric title="Pressure Sensor" value={current.pressureAvailable ? number(current.pressure, 5) : '—'} unit={current.pressureAvailable ? 'bar' : ''} icon="gauge" color="teal" subtitle={current.pressureAvailable ? `Raw sensor value ${number(current.rawPressure)}` : 'Waiting for pressure reading'}/>
+    <Metric title="Inside Water Pressure" value={number(flowBasedPressure, 5)} unit="bar" icon="gauge" color="teal" />
+    <Metric title="Outside Water Pressure" value={current.pressureAvailable ? number(current.pressure, 5) : '—'} unit={current.pressureAvailable ? 'bar' : ''} icon="gauge" color="teal" subtitle={current.pressureAvailable ? 'Firebase pressure_sensor.pressure' : 'Waiting for pressure reading'}/>
     <Metric title="Acoustic Status" value={current.acousticStatus} icon="wave" color={current.acousticStatus === 'Normal' ? 'teal' : 'red'} subtitle={`RMS ${number(current.acousticRms, 2)} · Peak-to-peak ${number(current.acousticPeak)}`}/>
   </div>;
 }
